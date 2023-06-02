@@ -7,7 +7,6 @@ import {
   WebSocketGateway,
 } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MessagingService } from './messaging.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { DeleteMessageDto } from './dto/delete-message.dto';
@@ -17,22 +16,24 @@ import { GetMessagesDto } from './dto/get-messages.dto';
 export class MessagingGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
-  constructor(
-    private messagingService: MessagingService,
-    private eventEmitter: EventEmitter2,
-  ) {}
+  private clients = new Map<string, Socket>();
+  constructor(private messagingService: MessagingService) {}
 
   @SubscribeMessage('sendMessage')
   async createMessage(
     @ConnectedSocket() client: Socket,
     @MessageBody() createMessage: CreateMessageDto,
   ): Promise<void> {
-    const message = {
+    const message = await this.messagingService.createMessage({
       senderId: client.handshake.headers['user-id'] as string,
       receiverId: createMessage.receiverId,
       text: createMessage.text,
-    };
-    await this.messagingService.createMessage(message);
+    });
+    if (this.clients.has(createMessage.receiverId)) {
+      this.clients
+        .get(client.handshake.headers['user-id'] as string)
+        .emit('newMessage', message);
+    }
   }
 
   @SubscribeMessage('getMessages')
@@ -51,30 +52,25 @@ export class MessagingGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() deleteMessage: DeleteMessageDto,
   ): Promise<void> {
-    await this.messagingService.deleteStatPeriod(
+    const msg = await this.messagingService.getMessageById(
+      deleteMessage.messageId,
+    );
+    await this.messagingService.deleteMessage(
       deleteMessage.messageId,
       client.handshake.headers['user-id'] as string,
     );
+    if (this.clients.has(msg.receiverId)) {
+      this.clients
+        .get(client.handshake.headers['user-id'] as string)
+        .emit('deletedMessage', deleteMessage);
+    }
   }
 
   handleConnection(client: Socket) {
-    const mediaId = parseInt(client.handshake.query.mediaId as string);
-    if (isNaN(mediaId)) {
-      client.disconnect();
-      return;
-    }
-    this.eventEmitter.emit(`media.started`, {
-      mediaId,
-      userId: client.handshake.headers['user-id'] as string,
-      sessionId: client.id,
-    });
+    this.clients.set(client.handshake.headers['user-id'] as string, client);
   }
 
   handleDisconnect(client: Socket) {
-    this.eventEmitter.emit(`media.stopped`, {
-      mediaId: parseInt(client.handshake.query.mediaId as string),
-      userId: client.handshake.headers['user-id'] as string,
-      sessionId: client.id,
-    });
+    this.clients.delete(client.handshake.headers['user-id'] as string);
   }
 }

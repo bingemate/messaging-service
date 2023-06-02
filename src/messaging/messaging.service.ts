@@ -18,8 +18,12 @@ export class MessagingService {
     return await this.messageEntityRepository.save(messageEntity);
   }
 
-  async deleteStatPeriod(id: string, senderId: string) {
+  async deleteMessage(id: string, senderId: string) {
     await this.messageEntityRepository.delete({ id, senderId });
+  }
+
+  async getMessageById(id: string) {
+    return await this.messageEntityRepository.findOneBy({ id });
   }
 
   async getMessages(senderId: string, receiverId: string) {

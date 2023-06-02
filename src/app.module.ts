@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServiceStatusModule } from './service-status/service-status.module';
 import { MessagingModule } from './messaging/messaging.module';
@@ -8,7 +7,6 @@ import { MessagingModule } from './messaging/messaging.module';
 @Module({
   imports: [
     ConfigModule.forRoot(),
-    EventEmitterModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST,
