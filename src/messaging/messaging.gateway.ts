@@ -38,9 +38,10 @@ export class MessagingGateway
 
   @SubscribeMessage('getMessages')
   async getMessages(@ConnectedSocket() client: Socket): Promise<void> {
-    await this.messagingService.getMessages(
+    const messages = await this.messagingService.getMessages(
       client.handshake.headers['user-id'] as string,
     );
+    client.emit('messages', messages);
   }
 
   @SubscribeMessage('deleteMessage')
