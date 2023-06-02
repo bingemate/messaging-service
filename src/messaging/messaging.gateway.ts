@@ -10,7 +10,6 @@ import { Socket } from 'socket.io';
 import { MessagingService } from './messaging.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { DeleteMessageDto } from './dto/delete-message.dto';
-import { GetMessagesDto } from './dto/get-messages.dto';
 
 @WebSocketGateway({ cors: true })
 export class MessagingGateway
@@ -29,6 +28,7 @@ export class MessagingGateway
       receiverId: createMessage.receiverId,
       text: createMessage.text,
     });
+    client.emit('newMessage', message);
     if (this.clients.has(createMessage.receiverId)) {
       this.clients
         .get(client.handshake.headers['user-id'] as string)
@@ -37,13 +37,9 @@ export class MessagingGateway
   }
 
   @SubscribeMessage('getMessages')
-  async getMessages(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() getMessagesDto: GetMessagesDto,
-  ): Promise<void> {
+  async getMessages(@ConnectedSocket() client: Socket): Promise<void> {
     await this.messagingService.getMessages(
       client.handshake.headers['user-id'] as string,
-      getMessagesDto.receiverId,
     );
   }
 
