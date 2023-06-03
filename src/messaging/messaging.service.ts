@@ -30,7 +30,7 @@ export class MessagingService {
     return await this.messageEntityRepository
       .createQueryBuilder()
       .where('MessageEntity.senderId=:userId', { userId })
-      .orWhere('MessageEntity.senderId=:userId', { userId })
+      .orWhere('MessageEntity.receiverId=:userId', { userId })
       .getMany();
   }
 }
