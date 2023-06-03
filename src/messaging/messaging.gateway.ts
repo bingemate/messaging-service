@@ -30,9 +30,7 @@ export class MessagingGateway
     });
     client.emit('newMessage', message);
     if (this.clients.has(createMessage.receiverId)) {
-      this.clients
-        .get(client.handshake.headers['user-id'] as string)
-        .emit('newMessage', message);
+      this.clients.get(createMessage.receiverId).emit('newMessage', message);
     }
   }
 
@@ -57,9 +55,7 @@ export class MessagingGateway
       client.handshake.headers['user-id'] as string,
     );
     if (this.clients.has(msg.receiverId)) {
-      this.clients
-        .get(client.handshake.headers['user-id'] as string)
-        .emit('deletedMessage', deleteMessage);
+      this.clients.get(msg.receiverId).emit('deletedMessage', deleteMessage);
     }
   }
 
