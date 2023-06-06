@@ -18,21 +18,19 @@ export class MessagingService {
     return await this.messageEntityRepository.save(messageEntity);
   }
 
-  async deleteStatPeriod(id: string, senderId: string) {
+  async deleteMessage(id: string, senderId: string) {
     await this.messageEntityRepository.delete({ id, senderId });
   }
 
-  async getMessages(senderId: string, receiverId: string) {
+  async getMessageById(id: string) {
+    return await this.messageEntityRepository.findOneBy({ id });
+  }
+
+  async getMessages(userId: string) {
     return await this.messageEntityRepository
       .createQueryBuilder()
-      .where(
-        'MessageEntity.senderId=:senderId AND MessageEntity.receiverId=:receiverId',
-        { senderId, receiverId },
-      )
-      .orWhere(
-        'MessageEntity.senderId=:receiverId AND MessageEntity.receiverId=:senderId',
-        { senderId, receiverId },
-      )
+      .where('MessageEntity.senderId=:userId', { userId })
+      .orWhere('MessageEntity.receiverId=:userId', { userId })
       .getMany();
   }
 }
