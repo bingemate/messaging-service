@@ -2,7 +2,6 @@ import {
   ConnectedSocket,
   MessageBody,
   OnGatewayConnection,
-  OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
 } from '@nestjs/websockets';
@@ -12,9 +11,7 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { DeleteMessageDto } from './dto/delete-message.dto';
 
 @WebSocketGateway({ cors: true })
-export class MessagingGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+export class MessagingGateway implements OnGatewayConnection {
   private clients = new Map<string, Socket>();
   constructor(private messagingService: MessagingService) {}
 
@@ -24,8 +21,10 @@ export class MessagingGateway
     @MessageBody() createMessage: CreateMessageDto,
   ): Promise<void> {
     try {
+      const token = client.handshake.auth['token'];
+      const userId = this.messagingService.getSession(token);
       const message = await this.messagingService.createMessage({
-        senderId: client.handshake.headers['user-id'] as string,
+        senderId: userId,
         receiverId: createMessage.receiverId,
         text: createMessage.text,
       });
@@ -41,9 +40,9 @@ export class MessagingGateway
   @SubscribeMessage('getMessages')
   async getMessages(@ConnectedSocket() client: Socket): Promise<void> {
     try {
-      const messages = await this.messagingService.getMessages(
-        client.handshake.headers['user-id'] as string,
-      );
+      const token = client.handshake.auth['token'];
+      const userId = this.messagingService.getSession(token);
+      const messages = await this.messagingService.getMessages(userId);
       client.emit('messages', messages);
     } catch (e) {
       console.log(e);
@@ -56,12 +55,14 @@ export class MessagingGateway
     @MessageBody() deleteMessage: DeleteMessageDto,
   ): Promise<void> {
     try {
+      const token = client.handshake.auth['token'];
+      const userId = this.messagingService.getSession(token);
       const msg = await this.messagingService.getMessageById(
         deleteMessage.messageId,
       );
       await this.messagingService.deleteMessage(
         deleteMessage.messageId,
-        client.handshake.headers['user-id'] as string,
+        userId,
       );
       if (this.clients.has(msg.receiverId)) {
         this.clients.get(msg.receiverId).emit('deletedMessage', deleteMessage);
@@ -72,10 +73,18 @@ export class MessagingGateway
   }
 
   handleConnection(client: Socket) {
-    this.clients.set(client.handshake.headers['user-id'] as string, client);
+    const token = client.handshake.auth['token'];
+    const userId = this.messagingService.getSession(token);
+    this.clients.set(userId, client);
+    client.on('disconnecting', () => {
+      this.onDisconnect(client);
+    });
   }
 
-  handleDisconnect(client: Socket) {
-    this.clients.delete(client.handshake.headers['user-id'] as string);
+  onDisconnect(client: Socket) {
+    const token = client.handshake.auth['token'];
+    const userId = this.messagingService.getSession(token);
+    this.messagingService.deleteSession(token);
+    this.clients.delete(userId);
   }
 }
