@@ -63,6 +63,9 @@ export class MessagingGateway implements OnGatewayConnection {
       const msg = await this.messagingService.getMessageById(
         deleteMessage.messageId,
       );
+      if (!msg) {
+        return;
+      }
       await this.messagingService.deleteMessage(
         deleteMessage.messageId,
         userId,
