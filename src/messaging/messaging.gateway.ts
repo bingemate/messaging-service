@@ -75,6 +75,9 @@ export class MessagingGateway implements OnGatewayConnection {
   handleConnection(client: Socket) {
     const token = client.handshake.auth['token'];
     const userId = this.messagingService.getSession(token);
+    if (!userId) {
+      client.disconnect();
+    }
     this.clients.set(userId, client);
     client.on('disconnecting', () => {
       this.onDisconnect(client);
