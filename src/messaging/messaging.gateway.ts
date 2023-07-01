@@ -23,6 +23,9 @@ export class MessagingGateway implements OnGatewayConnection {
     try {
       const token = client.handshake.auth['token'];
       const userId = this.messagingService.getSession(token);
+      if (userId === createMessage.receiverId) {
+        return;
+      }
       const message = await this.messagingService.createMessage({
         senderId: userId,
         receiverId: createMessage.receiverId,
