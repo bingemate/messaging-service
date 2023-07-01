@@ -9,6 +9,7 @@ import { Socket } from 'socket.io';
 import { MessagingService } from './messaging.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { DeleteMessageDto } from './dto/delete-message.dto';
+import { validate as isValidUUID } from 'uuid';
 
 @WebSocketGateway({ cors: true })
 export class MessagingGateway implements OnGatewayConnection {
@@ -23,7 +24,10 @@ export class MessagingGateway implements OnGatewayConnection {
     try {
       const token = client.handshake.auth['token'];
       const userId = this.messagingService.getSession(token);
-      if (userId === createMessage.receiverId) {
+      if (
+        userId === createMessage.receiverId ||
+        !isValidUUID(createMessage.receiverId)
+      ) {
         return;
       }
       const message = await this.messagingService.createMessage({
@@ -63,6 +67,9 @@ export class MessagingGateway implements OnGatewayConnection {
       const msg = await this.messagingService.getMessageById(
         deleteMessage.messageId,
       );
+      if (!msg) {
+        return;
+      }
       await this.messagingService.deleteMessage(
         deleteMessage.messageId,
         userId,
