@@ -12,7 +12,7 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { DeleteMessageDto } from './dto/delete-message.dto';
 import { validate as isValidUUID } from 'uuid';
 
-@WebSocketGateway({ cors: true })
+@WebSocketGateway(3001, { cors: true })
 export class MessagingGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Socket;
