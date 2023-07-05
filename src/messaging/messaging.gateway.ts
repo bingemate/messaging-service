@@ -74,7 +74,7 @@ export class MessagingGateway implements OnGatewayConnection {
         deleteMessage.messageId,
         userId,
       );
-      this.server.to(msg.receiverId).emit('newMessage', deleteMessage);
+      this.server.to(msg.receiverId).emit('deletedMessage', deleteMessage);
     } catch (e) {
       console.log(e);
     }
