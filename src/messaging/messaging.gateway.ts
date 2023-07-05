@@ -4,6 +4,7 @@ import {
   OnGatewayConnection,
   SubscribeMessage,
   WebSocketGateway,
+  WebSocketServer,
 } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 import { MessagingService } from './messaging.service';
@@ -13,7 +14,8 @@ import { validate as isValidUUID } from 'uuid';
 
 @WebSocketGateway({ cors: true })
 export class MessagingGateway implements OnGatewayConnection {
-  private clients = new Map<string, Socket>();
+  @WebSocketServer()
+  server: Socket;
   constructor(private messagingService: MessagingService) {}
 
   @SubscribeMessage('sendMessage')
@@ -36,9 +38,7 @@ export class MessagingGateway implements OnGatewayConnection {
         text: createMessage.text,
       });
       client.emit('newMessage', message);
-      if (this.clients.has(createMessage.receiverId)) {
-        this.clients.get(createMessage.receiverId).emit('newMessage', message);
-      }
+      this.server.to(createMessage.receiverId).emit('newMessage', message);
     } catch (e) {
       console.log(e);
     }
@@ -74,9 +74,7 @@ export class MessagingGateway implements OnGatewayConnection {
         deleteMessage.messageId,
         userId,
       );
-      if (this.clients.has(msg.receiverId)) {
-        this.clients.get(msg.receiverId).emit('deletedMessage', deleteMessage);
-      }
+      this.server.to(msg.receiverId).emit('newMessage', deleteMessage);
     } catch (e) {
       console.log(e);
     }
@@ -88,7 +86,7 @@ export class MessagingGateway implements OnGatewayConnection {
     if (!userId) {
       client.disconnect();
     }
-    this.clients.set(userId, client);
+    client.join(userId);
     client.on('disconnecting', () => {
       this.onDisconnect(client);
     });
@@ -98,6 +96,6 @@ export class MessagingGateway implements OnGatewayConnection {
     const token = client.handshake.auth['token'];
     const userId = this.messagingService.getSession(token);
     this.messagingService.deleteSession(token);
-    this.clients.delete(userId);
+    client.leave(userId);
   }
 }
